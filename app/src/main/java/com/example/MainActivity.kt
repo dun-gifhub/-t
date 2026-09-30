@@ -56,6 +56,18 @@ fun DeviceMonitorAppContent(viewModel: MainViewModel) {
                 },
                 onRegister = { name, email, pass, passConfirm, apiUrl ->
                     viewModel.register(name, email, pass, passConfirm, apiUrl)
+                },
+                onConnectQuickTracker = { studentName, studentId, schoolName, grade, className, parentPhone, deviceName, apiUrl ->
+                    viewModel.connectQuickTracker(
+                        studentName,
+                        studentId,
+                        schoolName,
+                        grade,
+                        className,
+                        parentPhone,
+                        deviceName,
+                        apiUrl
+                    )
                 }
             )
         }
@@ -65,8 +77,8 @@ fun DeviceMonitorAppContent(viewModel: MainViewModel) {
             }
             DeviceLinkScreen(
                 state = uiState,
-                onLinkDevice = { name ->
-                    viewModel.registerDevice(name)
+                onLinkDevice = { name, studentName, schoolName, className, parentPhone ->
+                    viewModel.registerDevice(name, studentName, schoolName, className, parentPhone)
                 },
                 onLogout = {
                     viewModel.logout()
@@ -89,7 +101,18 @@ fun DeviceMonitorAppContent(viewModel: MainViewModel) {
                 onUpdateHeartbeatInterval = { viewModel.updateHeartbeatInterval(it) },
                 onToggleBackgroundService = { viewModel.setBackgroundService(it) },
                 onLogout = { viewModel.logout() },
-                onClearMessages = { viewModel.clearMessages() }
+                onClearMessages = { viewModel.clearMessages() },
+                onUpdateStudentProfile = { studentName, studentId, schoolName, grade, className, parentPhone, deviceName ->
+                    viewModel.updateStudentProfile(
+                        studentName,
+                        studentId,
+                        schoolName,
+                        grade,
+                        className,
+                        parentPhone,
+                        deviceName
+                    )
+                }
             )
         }
     }

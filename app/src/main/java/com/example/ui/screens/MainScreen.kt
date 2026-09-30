@@ -46,7 +46,16 @@ fun MainScreen(
     onUpdateHeartbeatInterval: (Int) -> Unit,
     onToggleBackgroundService: (Boolean) -> Unit,
     onLogout: () -> Unit,
-    onClearMessages: () -> Unit
+    onClearMessages: () -> Unit,
+    onUpdateStudentProfile: (
+        studentName: String,
+        studentId: String,
+        schoolName: String,
+        grade: String,
+        className: String,
+        parentPhone: String,
+        deviceName: String
+    ) -> Unit = { _, _, _, _, _, _, _ -> }
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -157,7 +166,8 @@ fun MainScreen(
                     telemetry = telemetry,
                     onToggleLocationSharing = onToggleLocationSharing,
                     onSyncNow = onSyncNow,
-                    onNavigateLocation = { onTabSelected(1) }
+                    onNavigateLocation = { onTabSelected(1) },
+                    onUpdateStudentProfile = onUpdateStudentProfile
                 )
                 1 -> LocationScreen(
                     telemetry = telemetry,

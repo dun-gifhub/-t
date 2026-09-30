@@ -29,6 +29,13 @@ data class MainUiState(
     val deviceName: String = "",
     val deviceId: String = "",
     val deviceUuid: String = "",
+    val studentName: String = "",
+    val studentId: String = "",
+    val schoolName: String = "",
+    val grade: String = "",
+    val className: String = "",
+    val parentPhone: String = "",
+    val isLinked: Boolean = false,
     val apiBaseUrl: String = "",
     val isLocationSharingEnabled: Boolean = false,
     val isBackgroundServiceEnabled: Boolean = true,
@@ -45,7 +52,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(
         MainUiState(
-            currentScreen = if (!prefs.authToken.isNullOrBlank() && !prefs.deviceId.isNullOrBlank()) {
+            currentScreen = if (prefs.isLinked || (!prefs.authToken.isNullOrBlank() && !prefs.deviceId.isNullOrBlank())) {
                 AppScreen.DASHBOARD
             } else if (!prefs.authToken.isNullOrBlank()) {
                 AppScreen.LINK_DEVICE
@@ -56,6 +63,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             deviceName = prefs.deviceName,
             deviceId = prefs.deviceId ?: "",
             deviceUuid = prefs.deviceUuid,
+            studentName = prefs.studentName,
+            studentId = prefs.studentId,
+            schoolName = prefs.schoolName,
+            grade = prefs.grade,
+            className = prefs.className,
+            parentPhone = prefs.parentPhone,
+            isLinked = prefs.isLinked,
             apiBaseUrl = prefs.apiBaseUrl,
             isLocationSharingEnabled = prefs.isLocationSharingEnabled,
             isBackgroundServiceEnabled = prefs.isBackgroundServiceEnabled,
@@ -81,6 +95,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 deviceName = prefs.deviceName,
                 deviceId = prefs.deviceId ?: "",
                 deviceUuid = prefs.deviceUuid,
+                studentName = prefs.studentName,
+                studentId = prefs.studentId,
+                schoolName = prefs.schoolName,
+                grade = prefs.grade,
+                className = prefs.className,
+                parentPhone = prefs.parentPhone,
+                isLinked = prefs.isLinked,
                 apiBaseUrl = prefs.apiBaseUrl,
                 isLocationSharingEnabled = prefs.isLocationSharingEnabled,
                 isBackgroundServiceEnabled = prefs.isBackgroundServiceEnabled,
@@ -223,11 +244,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun registerDevice(name: String) {
+    fun registerDevice(name: String, studentName: String? = null, schoolName: String? = null, className: String? = null, parentPhone: String? = null) {
         val trimmed = name.trim().ifEmpty { prefs.deviceName }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val res = repo.registerDeviceExplicit(trimmed)) {
+            when (val res = repo.registerDeviceExplicit(trimmed, studentName, schoolName, className, parentPhone)) {
                 is ApiResult.Success -> {
                     _uiState.update {
                         it.copy(
@@ -235,7 +256,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             deviceName = trimmed,
                             deviceId = res.data,
                             currentScreen = AppScreen.DASHBOARD,
-                            successMessage = "Thiết bị đã được liên kết thành công!"
+                            isLinked = true,
+                            successMessage = "Thiết bị đã được liên kết và đồng bộ thành công!"
                         )
                     }
                     startMonitoringServiceIfNeeded()
@@ -253,15 +275,90 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun connectQuickTracker(
+        studentName: String,
+        studentId: String,
+        schoolName: String,
+        grade: String,
+        className: String,
+        parentPhone: String,
+        deviceName: String,
+        customBaseUrl: String?
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+
+            if (!customBaseUrl.isNullOrBlank()) {
+                prefs.apiBaseUrl = customBaseUrl.trim()
+            }
+            prefs.studentName = studentName.trim().ifEmpty { "Học sinh Android" }
+            if (studentId.isNotBlank()) prefs.studentId = studentId.trim()
+            prefs.schoolName = schoolName.trim().ifEmpty { "THPT Chuyên Lê Hồng Phong" }
+            prefs.grade = grade.trim().ifEmpty { "Khối 10" }
+            prefs.className = className.trim().ifEmpty { "10A1" }
+            prefs.parentPhone = parentPhone.trim()
+            prefs.deviceName = deviceName.trim().ifEmpty { prefs.deviceName }
+
+            when (val res = repo.reportTelemetry("ONLINE")) {
+                is ApiResult.Success -> {
+                    val devId = res.data.id ?: prefs.deviceId ?: prefs.deviceUuid
+                    prefs.deviceId = devId
+                    prefs.isLinked = true
+                    refreshState()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            currentScreen = AppScreen.DASHBOARD,
+                            deviceId = devId,
+                            isLinked = true,
+                            successMessage = "Đã đồng bộ trực tiếp với máy chủ Render (qu-n-l-s1k1)!"
+                        )
+                    }
+                    startMonitoringServiceIfNeeded()
+                    syncNow()
+                }
+                is ApiResult.Error -> {
+                    prefs.isLinked = true
+                    refreshState()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            currentScreen = AppScreen.DASHBOARD,
+                            isLinked = true,
+                            errorMessage = res.message
+                        )
+                    }
+                    startMonitoringServiceIfNeeded()
+                }
+            }
+        }
+    }
+
+    fun updateStudentProfile(
+        studentName: String,
+        studentId: String,
+        schoolName: String,
+        grade: String,
+        className: String,
+        parentPhone: String,
+        deviceName: String
+    ) {
+        prefs.studentName = studentName.trim()
+        prefs.studentId = studentId.trim()
+        prefs.schoolName = schoolName.trim()
+        prefs.grade = grade.trim()
+        prefs.className = className.trim()
+        prefs.parentPhone = parentPhone.trim()
+        prefs.deviceName = deviceName.trim()
+        refreshState()
+        syncNow()
+    }
+
     fun setLocationSharing(enabled: Boolean) {
         repo.setLocationSharing(enabled)
         _uiState.update { it.copy(isLocationSharingEnabled = enabled) }
         viewModelScope.launch {
-            // Send updated heartbeat immediately to notify backend of status
-            repo.sendHeartbeat("ONLINE")
-            if (enabled) {
-                repo.sendLocationTelemetry()
-            }
+            repo.syncAllNow()
         }
     }
 
@@ -272,7 +369,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(
                     isSyncingNow = false,
-                    successMessage = if (ok) "Đã đồng bộ thông tin mới nhất lên Web" else null,
+                    successMessage = if (ok) "Đã đồng bộ lên máy chủ Render lúc ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())}" else null,
                     errorMessage = if (!ok) "Đồng bộ thất bại. Kiểm tra kết nối mạng." else null
                 )
             }
@@ -302,12 +399,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startMonitoringServiceIfNeeded() {
-        if (prefs.isBackgroundServiceEnabled && !prefs.authToken.isNullOrBlank() && !prefs.deviceId.isNullOrBlank()) {
+        if (prefs.isBackgroundServiceEnabled && (prefs.isLinked || !prefs.deviceId.isNullOrBlank() || !prefs.authToken.isNullOrBlank())) {
             DeviceMonitorService.startService(getApplication())
         }
     }
 
     fun logout() {
+        viewModelScope.launch {
+            repo.notifyUninstall()
+        }
         DeviceMonitorService.stopService(getApplication())
         repo.logout()
         _uiState.update {
@@ -315,7 +415,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 currentScreen = AppScreen.LOGIN,
                 apiBaseUrl = prefs.apiBaseUrl,
                 deviceUuid = prefs.deviceUuid,
-                deviceName = prefs.deviceName
+                deviceName = prefs.deviceName,
+                studentName = prefs.studentName,
+                studentId = prefs.studentId,
+                schoolName = prefs.schoolName,
+                grade = prefs.grade,
+                className = prefs.className,
+                parentPhone = prefs.parentPhone
             )
         }
     }

@@ -91,8 +91,15 @@ data class DeviceRegisterResponse(
 @JsonClass(generateAdapter = true)
 data class DeviceData(
     @Json(name = "id") val id: String? = null,
+    @Json(name = "userId") val userId: String? = null,
     @Json(name = "name") val name: String? = null,
     @Json(name = "deviceUuid") val deviceUuid: String? = null,
+    @Json(name = "studentName") val studentName: String? = null,
+    @Json(name = "studentId") val studentId: String? = null,
+    @Json(name = "schoolName") val schoolName: String? = null,
+    @Json(name = "grade") val grade: String? = null,
+    @Json(name = "className") val className: String? = null,
+    @Json(name = "parentPhone") val parentPhone: String? = null,
     @Json(name = "platform") val platform: String? = null,
     @Json(name = "osVersion") val osVersion: String? = null,
     @Json(name = "appVersion") val appVersion: String? = null,
@@ -100,7 +107,56 @@ data class DeviceData(
     @Json(name = "batteryLevel") val batteryLevel: Int? = null,
     @Json(name = "charging") val charging: Boolean? = null,
     @Json(name = "networkType") val networkType: String? = null,
-    @Json(name = "lastSeen") val lastSeen: String? = null
+    @Json(name = "latitude") val latitude: Double? = null,
+    @Json(name = "longitude") val longitude: Double? = null,
+    @Json(name = "accuracy") val accuracy: Float? = null,
+    @Json(name = "lastSeen") val lastSeen: String? = null,
+    @Json(name = "isUninstalled") val isUninstalled: Boolean? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DeviceTelemetryReportRequest(
+    @Json(name = "deviceUuid") val deviceUuid: String,
+    @Json(name = "name") val name: String,
+    @Json(name = "studentName") val studentName: String? = null,
+    @Json(name = "studentId") val studentId: String? = null,
+    @Json(name = "schoolName") val schoolName: String? = null,
+    @Json(name = "grade") val grade: String? = null,
+    @Json(name = "className") val className: String? = null,
+    @Json(name = "parentPhone") val parentPhone: String? = null,
+    @Json(name = "platform") val platform: String = "Android",
+    @Json(name = "latitude") val latitude: Double? = null,
+    @Json(name = "longitude") val longitude: Double? = null,
+    @Json(name = "accuracy") val accuracy: Float? = null,
+    @Json(name = "batteryLevel") val batteryLevel: Int? = null,
+    @Json(name = "charging") val charging: Boolean? = null,
+    @Json(name = "networkType") val networkType: String? = null,
+    @Json(name = "currentApp") val currentApp: String? = "Device Monitor Android",
+    @Json(name = "currentWebsite") val currentWebsite: String? = "qu-n-l-s1k1.onrender.com",
+    @Json(name = "status") val status: String = "ONLINE",
+    @Json(name = "isUninstalled") val isUninstalled: Boolean = false,
+    @Json(name = "isNoNetwork") val isNoNetwork: Boolean = false
+)
+
+@JsonClass(generateAdapter = true)
+data class DeviceTelemetryReportResponse(
+    @Json(name = "success") val success: Boolean = true,
+    @Json(name = "message") val message: String? = null,
+    @Json(name = "data") val data: DeviceData? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DeviceUninstallRequest(
+    @Json(name = "deviceUuid") val deviceUuid: String,
+    @Json(name = "studentName") val studentName: String? = null,
+    @Json(name = "isUninstalled") val isUninstalled: Boolean = true
+)
+
+@JsonClass(generateAdapter = true)
+data class DeviceUninstallResponse(
+    @Json(name = "success") val success: Boolean = true,
+    @Json(name = "message") val message: String? = null,
+    @Json(name = "data") val data: DeviceData? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -20,12 +20,16 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -52,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -62,16 +67,37 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.MainUiState
+import com.example.ui.theme.StatusOnline
 
 @Composable
 fun LoginScreen(
     state: MainUiState,
     onLogin: (email: String, pass: String, apiUrl: String?) -> Unit,
-    onRegister: (name: String, email: String, pass: String, passConfirm: String, apiUrl: String?) -> Unit
+    onRegister: (name: String, email: String, pass: String, passConfirm: String, apiUrl: String?) -> Unit,
+    onConnectQuickTracker: (
+        studentName: String,
+        studentId: String,
+        schoolName: String,
+        grade: String,
+        className: String,
+        parentPhone: String,
+        deviceName: String,
+        apiUrl: String?
+    ) -> Unit
 ) {
-    // 0: Đăng nhập, 1: Đăng ký
+    // 0: Kết nối nhanh, 1: Đăng nhập, 2: Đăng ký
     var authMode by remember { mutableIntStateOf(0) }
 
+    // Quick tracker fields
+    var studentName by remember { mutableStateOf(state.studentName.ifEmpty { "Nguyễn Minh Quân" }) }
+    var studentId by remember { mutableStateOf(state.studentId.ifEmpty { "HS1024" }) }
+    var schoolName by remember { mutableStateOf(state.schoolName.ifEmpty { "THPT Chuyên Lê Hồng Phong" }) }
+    var grade by remember { mutableStateOf(state.grade.ifEmpty { "Khối 10" }) }
+    var className by remember { mutableStateOf(state.className.ifEmpty { "10A1" }) }
+    var parentPhone by remember { mutableStateOf(state.parentPhone.ifEmpty { "0901234567" }) }
+    var deviceName by remember { mutableStateOf(state.deviceName.ifEmpty { "Điện thoại Android" }) }
+
+    // Account auth fields
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf(state.userEmail.ifEmpty { "dungdaumoi223@gmail.com" }) }
     var password by remember { mutableStateOf("") }
@@ -93,14 +119,48 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp, vertical = 28.dp),
+                .padding(horizontal = 20.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Prominent Web Connection Header
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(StatusOnline)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "ĐỒNG BỘ MÁY CHỦ WEB",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = StatusOnline
+                        )
+                        Text(
+                            text = "https://qu-n-l-s1k1.onrender.com",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
             // Hero Icon
             Box(
                 modifier = Modifier
-                    .size(76.dp)
+                    .size(68.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
@@ -109,11 +169,11 @@ fun LoginScreen(
                     imageVector = Icons.Default.PhoneAndroid,
                     contentDescription = "Device Monitor Logo",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(42.dp)
+                    modifier = Modifier.size(38.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "Device Monitor",
@@ -125,13 +185,14 @@ fun LoginScreen(
             )
 
             Text(
-                text = if (authMode == 0)
-                    "Đăng nhập tài khoản để liên kết thiết bị với Web Dashboard"
-                else
-                    "Đăng ký tài khoản mới và gửi lưu trữ lên Web Neon Database",
+                text = when (authMode) {
+                    0 -> "Kết nối nhanh & gửi báo cáo học sinh trực tiếp lên Web Render"
+                    1 -> "Đăng nhập tài khoản quản trị viên / phụ huynh"
+                    else -> "Đăng ký tài khoản mới trên cơ sở dữ liệu Neon PostgreSQL"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp, bottom = 20.dp),
+                modifier = Modifier.padding(top = 4.dp, bottom = 18.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
@@ -145,37 +206,52 @@ fun LoginScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
+                        .padding(18.dp)
                 ) {
-                    // Segmented Tabs: Đăng nhập / Đăng ký
+                    // Segmented Tabs: 0: KẾT NỐI NHANH, 1: ĐĂNG NHẬP, 2: ĐĂNG KÝ
                     TabRow(
                         selectedTabIndex = authMode,
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         contentColor = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp))
                     ) {
                         Tab(
                             selected = authMode == 0,
                             onClick = { authMode = 0 },
                             text = {
                                 Text(
-                                    "ĐĂNG NHẬP",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = if (authMode == 0) FontWeight.Bold else FontWeight.Normal
+                                    "KẾT NỐI NHANH",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (authMode == 0) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 11.sp
                                     )
                                 )
                             },
-                            modifier = Modifier.testTag("auth_tab_login")
+                            modifier = Modifier.testTag("auth_tab_quick")
                         )
                         Tab(
                             selected = authMode == 1,
                             onClick = { authMode = 1 },
                             text = {
                                 Text(
+                                    "ĐĂNG NHẬP",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (authMode == 1) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            },
+                            modifier = Modifier.testTag("auth_tab_login")
+                        )
+                        Tab(
+                            selected = authMode == 2,
+                            onClick = { authMode = 2 },
+                            text = {
+                                Text(
                                     "ĐĂNG KÝ",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = if (authMode == 1) FontWeight.Bold else FontWeight.Normal
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (authMode == 2) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 11.sp
                                     )
                                 )
                             },
@@ -183,123 +259,187 @@ fun LoginScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // Registration Name Field
-                    AnimatedVisibility(visible = authMode == 1) {
-                        Column {
+                    // MODE 0: QUICK TRACKER
+                    if (authMode == 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedTextField(
-                                value = fullName,
-                                onValueChange = { fullName = it },
-                                label = { Text("Họ và tên / Tên hiển thị") },
-                                placeholder = { Text("Nguyễn Văn A") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Person, contentDescription = "Tên")
-                                },
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Text,
-                                    imeAction = ImeAction.Next
-                                ),
+                                value = studentName,
+                                onValueChange = { studentName = it },
+                                label = { Text("Tên học sinh") },
+                                placeholder = { Text("Nguyễn Minh Quân") },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                                 singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("name_input"),
+                                modifier = Modifier.fillMaxWidth().testTag("quick_student_name_input"),
                                 shape = RoundedCornerShape(12.dp)
                             )
-                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = className,
+                                    onValueChange = { className = it },
+                                    label = { Text("Lớp") },
+                                    placeholder = { Text("10A1") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f).testTag("quick_class_name_input"),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+
+                                OutlinedTextField(
+                                    value = grade,
+                                    onValueChange = { grade = it },
+                                    label = { Text("Khối") },
+                                    placeholder = { Text("Khối 10") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f).testTag("quick_grade_input"),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
+
+                            OutlinedTextField(
+                                value = schoolName,
+                                onValueChange = { schoolName = it },
+                                label = { Text("Trường học") },
+                                placeholder = { Text("THPT Chuyên Lê Hồng Phong") },
+                                leadingIcon = { Icon(Icons.Default.School, contentDescription = null) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("quick_school_name_input"),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = parentPhone,
+                                onValueChange = { parentPhone = it },
+                                label = { Text("SĐT phụ huynh") },
+                                placeholder = { Text("0901234567") },
+                                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("quick_parent_phone_input"),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            OutlinedTextField(
+                                value = deviceName,
+                                onValueChange = { deviceName = it },
+                                label = { Text("Tên thiết bị hiển thị") },
+                                placeholder = { Text("Điện thoại Android") },
+                                leadingIcon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("quick_device_name_input"),
+                                shape = RoundedCornerShape(12.dp)
+                            )
                         }
                     }
 
-                    // Email Field
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email tài khoản") },
-                        placeholder = { Text("nhap_email@domain.com") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Email, contentDescription = "Email Icon")
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("email_input"),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Password Field
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Mật khẩu") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Lock, contentDescription = "Password Icon")
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = "Toggle password visibility"
-                                )
-                            }
-                        },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = if (authMode == 1) ImeAction.Next else ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (authMode == 0) {
-                                focusManager.clearFocus()
-                                onLogin(email, password, if (showServerConfig) apiUrl else null)
-                            }
-                        }),
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("password_input"),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    // Confirm Password Field (for Registration)
-                    AnimatedVisibility(visible = authMode == 1) {
+                    // MODE 1 & 2: LOGIN OR REGISTER
+                    if (authMode == 1 || authMode == 2) {
                         Column {
-                            Spacer(modifier = Modifier.height(14.dp))
+                            // Registration Name Field
+                            AnimatedVisibility(visible = authMode == 2) {
+                                Column {
+                                    OutlinedTextField(
+                                        value = fullName,
+                                        onValueChange = { fullName = it },
+                                        label = { Text("Họ và tên / Tên hiển thị") },
+                                        placeholder = { Text("Nguyễn Văn A") },
+                                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Tên") },
+                                        keyboardOptions = KeyboardOptions(
+                                            keyboardType = KeyboardType.Text,
+                                            imeAction = ImeAction.Next
+                                        ),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth().testTag("name_input"),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                            }
+
+                            // Email Field
                             OutlinedTextField(
-                                value = confirmPassword,
-                                onValueChange = { confirmPassword = it },
-                                label = { Text("Xác nhận lại mật khẩu") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Lock, contentDescription = "Confirm Password")
-                                },
+                                value = email,
+                                onValueChange = { email = it },
+                                label = { Text("Email tài khoản") },
+                                placeholder = { Text("nhap_email@domain.com") },
+                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email Icon") },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Email,
+                                    imeAction = ImeAction.Next
+                                ),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("email_input"),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Password Field
+                            OutlinedTextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                label = { Text("Mật khẩu") },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password Icon") },
                                 trailingIcon = {
-                                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                         Icon(
-                                            imageVector = if (confirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            contentDescription = "Toggle confirm password visibility"
+                                            imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                            contentDescription = "Toggle password visibility"
                                         )
                                     }
                                 },
-                                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Password,
-                                    imeAction = ImeAction.Done
+                                    imeAction = if (authMode == 2) ImeAction.Next else ImeAction.Done
                                 ),
                                 keyboardActions = KeyboardActions(onDone = {
-                                    focusManager.clearFocus()
-                                    onRegister(fullName, email, password, confirmPassword, if (showServerConfig) apiUrl else null)
+                                    if (authMode == 1) {
+                                        focusManager.clearFocus()
+                                        onLogin(email, password, if (showServerConfig) apiUrl else null)
+                                    }
                                 }),
                                 singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("confirm_password_input"),
+                                modifier = Modifier.fillMaxWidth().testTag("password_input"),
                                 shape = RoundedCornerShape(12.dp)
                             )
+
+                            // Confirm Password Field (for Registration)
+                            AnimatedVisibility(visible = authMode == 2) {
+                                Column {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    OutlinedTextField(
+                                        value = confirmPassword,
+                                        onValueChange = { confirmPassword = it },
+                                        label = { Text("Xác nhận lại mật khẩu") },
+                                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Confirm Password") },
+                                        trailingIcon = {
+                                            IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                                Icon(
+                                                    imageVector = if (confirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                                    contentDescription = "Toggle confirm password visibility"
+                                                )
+                                            }
+                                        },
+                                        visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                        keyboardOptions = KeyboardOptions(
+                                            keyboardType = KeyboardType.Password,
+                                            imeAction = ImeAction.Done
+                                        ),
+                                        keyboardActions = KeyboardActions(onDone = {
+                                            focusManager.clearFocus()
+                                            onRegister(fullName, email, password, confirmPassword, if (showServerConfig) apiUrl else null)
+                                        }),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth().testTag("confirm_password_input"),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -310,9 +450,7 @@ fun LoginScreen(
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 14.dp)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
                         ) {
                             Text(
                                 text = state.errorMessage,
@@ -327,9 +465,7 @@ fun LoginScreen(
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 14.dp)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
                         ) {
                             Text(
                                 text = state.successMessage,
@@ -340,21 +476,36 @@ fun LoginScreen(
                         }
                     }
 
-                    // Main Action Button (Login / Register)
+                    // Main Action Button
                     Button(
                         onClick = {
                             focusManager.clearFocus()
-                            if (authMode == 0) {
-                                onLogin(email, password, if (showServerConfig) apiUrl else null)
-                            } else {
-                                onRegister(fullName, email, password, confirmPassword, if (showServerConfig) apiUrl else null)
+                            when (authMode) {
+                                0 -> onConnectQuickTracker(
+                                    studentName,
+                                    studentId,
+                                    schoolName,
+                                    grade,
+                                    className,
+                                    parentPhone,
+                                    deviceName,
+                                    if (showServerConfig) apiUrl else null
+                                )
+                                1 -> onLogin(email, password, if (showServerConfig) apiUrl else null)
+                                2 -> onRegister(fullName, email, password, confirmPassword, if (showServerConfig) apiUrl else null)
                             }
                         },
                         enabled = !state.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
-                            .testTag(if (authMode == 0) "login_button" else "register_button"),
+                            .testTag(
+                                when (authMode) {
+                                    0 -> "quick_connect_button"
+                                    1 -> "login_button"
+                                    else -> "register_button"
+                                }
+                            ),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
@@ -366,40 +517,27 @@ fun LoginScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                if (authMode == 0) "Đang kết nối máy chủ..." else "Đang đăng ký...",
+                                "Đang đồng bộ với Render...",
                                 style = MaterialTheme.typography.titleMedium
                             )
                         } else {
-                            if (authMode == 1) {
-                                Icon(Icons.Default.HowToReg, contentDescription = null, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                            Text(
-                                text = if (authMode == 0) "Đăng nhập" else "Đăng ký tài khoản",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                            Icon(
+                                imageVector = when (authMode) {
+                                    0 -> Icons.Default.Bolt
+                                    1 -> Icons.Default.CheckCircle
+                                    else -> Icons.Default.HowToReg
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
                             )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Switch Mode Text Button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        TextButton(
-                            onClick = {
-                                authMode = if (authMode == 0) 1 else 0
-                            }
-                        ) {
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (authMode == 0)
-                                    "Chưa có tài khoản? Đăng ký ngay"
-                                else
-                                    "Đã có tài khoản? Đăng nhập ngay",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                                text = when (authMode) {
+                                    0 -> "⚡ Bắt đầu đồng bộ về Web"
+                                    1 -> "Đăng nhập tài khoản"
+                                    else -> "Đăng ký tài khoản"
+                                },
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                             )
                         }
                     }
@@ -409,9 +547,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Expandable Server URL config
-            TextButton(
-                onClick = { showServerConfig = !showServerConfig }
-            ) {
+            TextButton(onClick = { showServerConfig = !showServerConfig }) {
                 Icon(
                     imageVector = if (showServerConfig) Icons.Default.Settings else Icons.Default.Dns,
                     contentDescription = null,
@@ -419,16 +555,14 @@ fun LoginScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (showServerConfig) "Ẩn cấu hình máy chủ" else "Cấu hình địa chỉ máy chủ API",
+                    text = if (showServerConfig) "Ẩn cấu hình máy chủ" else "Cấu hình địa chỉ máy chủ (Mặc định: Render)",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
             AnimatedVisibility(visible = showServerConfig) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
@@ -444,9 +578,7 @@ fun LoginScreen(
                             onValueChange = { apiUrl = it },
                             placeholder = { Text("https://qu-n-l-s1k1.onrender.com") },
                             singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("api_url_input"),
+                            modifier = Modifier.fillMaxWidth().testTag("api_url_input"),
                             shape = RoundedCornerShape(10.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -455,7 +587,7 @@ fun LoginScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Dữ liệu đăng ký và đăng nhập được gửi trực tiếp đến Render Backend và lưu vào Neon PostgreSQL.",
+                            text = "Hệ thống kết nối trực tiếp với https://qu-n-l-s1k1.onrender.com và lưu trữ trên cơ sở dữ liệu Neon PostgreSQL.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

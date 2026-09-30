@@ -117,7 +117,7 @@ class DeviceMonitorService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Device Monitor • $devName")
-            .setContentText("Trạng thái: Hoạt động • $locText")
+            .setContentText("Render: qu-n-l-s1k1.onrender.com • $locText")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -163,8 +163,8 @@ class DeviceMonitorService : Service() {
         syncJob = serviceScope.launch {
             val app = application as? DeviceMonitorApp ?: return@launch
             while (isActive) {
-                // Check if user is logged in and device is registered
-                if (!app.prefs.authToken.isNullOrBlank() && !app.prefs.deviceId.isNullOrBlank()) {
+                // Check if device is linked or user is logged in
+                if (app.prefs.isLinked || !app.prefs.deviceId.isNullOrBlank() || !app.prefs.authToken.isNullOrBlank()) {
                     try {
                         app.repository.syncAllNow()
                         updateNotification()

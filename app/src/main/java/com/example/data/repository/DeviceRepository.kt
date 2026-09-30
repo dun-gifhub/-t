@@ -6,7 +6,10 @@ import com.example.BuildConfig
 import com.example.data.api.ApiClient
 import com.example.data.local.PreferenceManager
 import com.example.data.model.DeviceConnectionStatus
+import com.example.data.model.DeviceData
 import com.example.data.model.DeviceRegisterRequest
+import com.example.data.model.DeviceTelemetryReportRequest
+import com.example.data.model.DeviceUninstallRequest
 import com.example.data.model.HeartbeatRequest
 import com.example.data.model.LocationUploadRequest
 import com.example.data.model.LoginRequest
@@ -175,9 +178,129 @@ class DeviceRepository(
         }
     }
 
+    suspend fun reportTelemetry(status: String = "ONLINE"): ApiResult<DeviceData> {
+        val battery = BatteryHelper.getBatteryInfo(context)
+        val network = NetworkHelper.getNetworkType(context)
+        val hasLocPerm = LocationHelper.hasLocationPermission(context)
+        val locSharing = prefs.isLocationSharingEnabled
+
+        val location = if (locSharing && hasLocPerm) {
+            LocationHelper.getCurrentLocation(context)
+        } else null
+
+        _telemetryState.update { it.copy(syncStatus = DeviceConnectionStatus.SYNCING) }
+
+        return try {
+            val api = ApiClient.getApiService(prefs)
+            val request = DeviceTelemetryReportRequest(
+                deviceUuid = prefs.deviceUuid,
+                name = prefs.deviceName,
+                studentName = prefs.studentName,
+                studentId = prefs.studentId,
+                schoolName = prefs.schoolName,
+                grade = prefs.grade,
+                className = prefs.className,
+                parentPhone = prefs.parentPhone,
+                platform = "Android",
+                latitude = location?.latitude ?: prefs.lastLatitude,
+                longitude = location?.longitude ?: prefs.lastLongitude,
+                accuracy = location?.accuracy ?: prefs.lastAccuracy,
+                batteryLevel = battery.level,
+                charging = battery.isCharging,
+                networkType = network,
+                currentApp = "Device Monitor Android",
+                currentWebsite = "qu-n-l-s1k1.onrender.com",
+                status = status,
+                isUninstalled = false,
+                isNoNetwork = (network == "NONE")
+            )
+
+            val response = api.reportTelemetry(request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                consecutiveFailures = 0
+                val now = System.currentTimeMillis()
+                prefs.lastSyncTime = now
+                prefs.lastStatus = status
+                prefs.isLinked = true
+
+                val devData = response.body()?.data
+                val devId = devData?.id
+                if (!devId.isNullOrBlank()) {
+                    prefs.deviceId = devId
+                }
+
+                if (location != null) {
+                    prefs.saveLastCoordinates(location.latitude, location.longitude, location.accuracy)
+                }
+
+                _telemetryState.update {
+                    it.copy(
+                        batteryLevel = battery.level,
+                        isCharging = battery.isCharging,
+                        networkType = network,
+                        locationPermissionGranted = hasLocPerm,
+                        locationSharingEnabled = locSharing,
+                        latitude = location?.latitude ?: prefs.lastLatitude,
+                        longitude = location?.longitude ?: prefs.lastLongitude,
+                        accuracy = location?.accuracy ?: prefs.lastAccuracy,
+                        locationTimestamp = location?.timestamp ?: it.locationTimestamp,
+                        lastSyncTime = now,
+                        syncStatus = DeviceConnectionStatus.ONLINE,
+                        lastError = null
+                    )
+                }
+                ApiResult.Success(devData ?: DeviceData())
+            } else {
+                consecutiveFailures++
+                val errMsg = response.body()?.message ?: "Lỗi đồng bộ máy chủ (${response.code()})"
+                _telemetryState.update {
+                    it.copy(
+                        syncStatus = DeviceConnectionStatus.OFFLINE,
+                        lastError = errMsg
+                    )
+                }
+                ApiResult.Error(response.code(), errMsg)
+            }
+        } catch (e: Exception) {
+            consecutiveFailures++
+            val errMsg = "Mất kết nối máy chủ Render (https://qu-n-l-s1k1.onrender.com)"
+            _telemetryState.update {
+                it.copy(
+                    syncStatus = DeviceConnectionStatus.OFFLINE,
+                    lastError = errMsg
+                )
+            }
+            ApiResult.Error(null, errMsg)
+        }
+    }
+
+    suspend fun notifyUninstall(): Boolean {
+        return try {
+            val api = ApiClient.getApiService(prefs)
+            val res = api.notifyUninstall(
+                DeviceUninstallRequest(
+                    deviceUuid = prefs.deviceUuid,
+                    studentName = prefs.studentName,
+                    isUninstalled = true
+                )
+            )
+            res.isSuccessful
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun syncDeviceRegistration(): ApiResult<String> {
         val existingDeviceId = prefs.deviceId
         val api = ApiClient.getApiService(prefs)
+
+        // First attempt standard telemetry report which auto-registers on Render
+        val reportRes = reportTelemetry("ONLINE")
+        if (reportRes is ApiResult.Success) {
+            val id = prefs.deviceId ?: reportRes.data.id ?: prefs.deviceUuid
+            prefs.isLinked = true
+            return ApiResult.Success(id)
+        }
 
         return try {
             // Check existing devices for this user
@@ -188,6 +311,7 @@ class DeviceRepository(
                 if (matched?.id != null) {
                     prefs.deviceId = matched.id
                     prefs.deviceName = matched.name ?: prefs.deviceName
+                    prefs.isLinked = true
                     return ApiResult.Success(matched.id)
                 }
             }
@@ -207,6 +331,7 @@ class DeviceRepository(
                 val devId = registerResp.body()?.extractDeviceId()
                 if (!devId.isNullOrBlank()) {
                     prefs.deviceId = devId
+                    prefs.isLinked = true
                     ApiResult.Success(devId)
                 } else {
                     ApiResult.Error(registerResp.code(), "Đăng ký thành công nhưng thiếu Device ID")
@@ -223,10 +348,29 @@ class DeviceRepository(
         }
     }
 
-    suspend fun registerDeviceExplicit(name: String): ApiResult<String> {
+    suspend fun registerDeviceExplicit(
+        name: String,
+        studentName: String? = null,
+        schoolName: String? = null,
+        className: String? = null,
+        parentPhone: String? = null
+    ): ApiResult<String> {
         prefs.deviceName = name.trim()
-        val api = ApiClient.getApiService(prefs)
+        if (!studentName.isNullOrBlank()) prefs.studentName = studentName.trim()
+        if (!schoolName.isNullOrBlank()) prefs.schoolName = schoolName.trim()
+        if (!className.isNullOrBlank()) prefs.className = className.trim()
+        if (!parentPhone.isNullOrBlank()) prefs.parentPhone = parentPhone.trim()
 
+        // Sync report directly to Render
+        val rep = reportTelemetry("ONLINE")
+        if (rep is ApiResult.Success) {
+            val devId = rep.data.id ?: prefs.deviceId ?: prefs.deviceUuid
+            prefs.deviceId = devId
+            prefs.isLinked = true
+            return ApiResult.Success(devId)
+        }
+
+        val api = ApiClient.getApiService(prefs)
         return try {
             val registerResp = api.registerDevice(
                 DeviceRegisterRequest(
@@ -242,6 +386,7 @@ class DeviceRepository(
                 val devId = registerResp.body()?.extractDeviceId()
                 if (!devId.isNullOrBlank()) {
                     prefs.deviceId = devId
+                    prefs.isLinked = true
                     ApiResult.Success(devId)
                 } else {
                     ApiResult.Error(registerResp.code(), "Đăng ký thành công nhưng không có Device ID")
@@ -268,8 +413,6 @@ class DeviceRepository(
         val hasLocPerm = LocationHelper.hasLocationPermission(context)
         val locSharing = prefs.isLocationSharingEnabled
 
-        _telemetryState.update { it.copy(syncStatus = DeviceConnectionStatus.SYNCING) }
-
         return try {
             val api = ApiClient.getApiService(prefs)
             val response = api.sendHeartbeat(
@@ -285,51 +428,12 @@ class DeviceRepository(
             )
 
             if (response.isSuccessful) {
-                consecutiveFailures = 0
-                val now = System.currentTimeMillis()
-                prefs.lastSyncTime = now
-                prefs.lastStatus = status
-
-                _telemetryState.update {
-                    it.copy(
-                        batteryLevel = battery.level,
-                        isCharging = battery.isCharging,
-                        networkType = network,
-                        locationPermissionGranted = hasLocPerm,
-                        locationSharingEnabled = locSharing,
-                        lastSyncTime = now,
-                        syncStatus = DeviceConnectionStatus.ONLINE,
-                        lastError = null
-                    )
-                }
                 ApiResult.Success(true)
             } else {
-                consecutiveFailures++
-                val errMsg = when (response.code()) {
-                    401 -> "Phiên đăng nhập hết hạn (401)"
-                    403 -> "Không có quyền cập nhật thiết bị này (403)"
-                    404 -> "Thiết bị không tồn tại trên hệ thống (404)"
-                    429 -> "Gửi quá nhanh, đang chờ giãn cách (429)"
-                    else -> "Lỗi gửi heartbeat (${response.code()})"
-                }
-                _telemetryState.update {
-                    it.copy(
-                        syncStatus = DeviceConnectionStatus.OFFLINE,
-                        lastError = errMsg
-                    )
-                }
-                ApiResult.Error(response.code(), errMsg)
+                ApiResult.Error(response.code(), "Lỗi gửi heartbeat (${response.code()})")
             }
         } catch (e: Exception) {
-            consecutiveFailures++
-            val errMsg = "Mất kết nối máy chủ"
-            _telemetryState.update {
-                it.copy(
-                    syncStatus = DeviceConnectionStatus.OFFLINE,
-                    lastError = errMsg
-                )
-            }
-            ApiResult.Error(null, errMsg)
+            ApiResult.Error(null, "Mất kết nối máy chủ")
         }
     }
 
@@ -379,11 +483,19 @@ class DeviceRepository(
 
     suspend fun syncAllNow(): Boolean {
         updateTelemetrySnapshot()
-        val hb = sendHeartbeat("ONLINE")
-        if (prefs.isLocationSharingEnabled && LocationHelper.hasLocationPermission(context)) {
-            sendLocationTelemetry()
+        val reportResult = reportTelemetry("ONLINE")
+
+        // Also call secondary endpoints if user has token and deviceId
+        if (!prefs.authToken.isNullOrBlank() && !prefs.deviceId.isNullOrBlank()) {
+            try {
+                sendHeartbeat("ONLINE")
+                if (prefs.isLocationSharingEnabled && LocationHelper.hasLocationPermission(context)) {
+                    sendLocationTelemetry()
+                }
+            } catch (_: Exception) {}
         }
-        return hb is ApiResult.Success
+
+        return reportResult is ApiResult.Success
     }
 
     fun setLocationSharing(enabled: Boolean) {

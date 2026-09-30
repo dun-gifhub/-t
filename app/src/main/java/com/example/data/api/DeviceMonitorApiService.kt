@@ -11,6 +11,10 @@ import com.example.data.model.LoginRequest
 import com.example.data.model.LoginResponse
 import com.example.data.model.RegisterRequest
 import com.example.data.model.RegisterResponse
+import com.example.data.model.DeviceTelemetryReportRequest
+import com.example.data.model.DeviceTelemetryReportResponse
+import com.example.data.model.DeviceUninstallRequest
+import com.example.data.model.DeviceUninstallResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -18,6 +22,16 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface DeviceMonitorApiService {
+
+    @POST("api/devices/report")
+    suspend fun reportTelemetry(
+        @Body body: DeviceTelemetryReportRequest
+    ): Response<DeviceTelemetryReportResponse>
+
+    @POST("api/devices/uninstall")
+    suspend fun notifyUninstall(
+        @Body body: DeviceUninstallRequest
+    ): Response<DeviceUninstallResponse>
 
     @POST("api/auth/register")
     suspend fun register(

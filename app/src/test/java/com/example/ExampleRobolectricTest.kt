@@ -69,4 +69,38 @@ class ExampleRobolectricTest {
         assertEquals("user@test.com", req.email)
         assertEquals("password123", req.password)
     }
+
+    @Test
+    fun `validate telemetry report model creation and student prefs`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = PreferenceManager(context)
+
+        prefs.studentName = "Nguyễn Minh Quân"
+        prefs.className = "10A1"
+        prefs.schoolName = "THPT Chuyên Lê Hồng Phong"
+
+        assertEquals("Nguyễn Minh Quân", prefs.studentName)
+        assertEquals("10A1", prefs.className)
+        assertEquals("THPT Chuyên Lê Hồng Phong", prefs.schoolName)
+
+        val report = com.example.data.model.DeviceTelemetryReportRequest(
+            deviceUuid = prefs.deviceUuid,
+            name = "Test Android",
+            studentName = prefs.studentName,
+            className = prefs.className,
+            schoolName = prefs.schoolName,
+            batteryLevel = 90,
+            charging = true,
+            networkType = "WIFI",
+            latitude = 21.0285,
+            longitude = 105.8542,
+            accuracy = 10f
+        )
+
+        assertEquals("Nguyễn Minh Quân", report.studentName)
+        assertEquals("10A1", report.className)
+        assertEquals(90, report.batteryLevel)
+        assertTrue(report.charging == true)
+        assertEquals(21.0285, report.latitude!!, 0.0001)
+    }
 }

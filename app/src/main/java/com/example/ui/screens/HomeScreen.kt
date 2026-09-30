@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,14 +25,18 @@ import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -40,14 +46,21 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -69,9 +82,29 @@ fun HomeScreen(
     telemetry: TelemetryState,
     onToggleLocationSharing: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
-    onNavigateLocation: () -> Unit
+    onNavigateLocation: () -> Unit,
+    onUpdateStudentProfile: (
+        studentName: String,
+        studentId: String,
+        schoolName: String,
+        grade: String,
+        className: String,
+        parentPhone: String,
+        deviceName: String
+    ) -> Unit = { _, _, _, _, _, _, _ -> }
 ) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    // Dialog state
+    var editStudentName by remember(uiState.studentName) { mutableStateOf(uiState.studentName) }
+    var editStudentId by remember(uiState.studentId) { mutableStateOf(uiState.studentId) }
+    var editSchoolName by remember(uiState.schoolName) { mutableStateOf(uiState.schoolName) }
+    var editGrade by remember(uiState.grade) { mutableStateOf(uiState.grade) }
+    var editClassName by remember(uiState.className) { mutableStateOf(uiState.className) }
+    var editParentPhone by remember(uiState.parentPhone) { mutableStateOf(uiState.parentPhone) }
+    var editDeviceName by remember(uiState.deviceName) { mutableStateOf(uiState.deviceName) }
 
     val formattedTime = telemetry.lastSyncTime?.let {
         SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(it))
@@ -84,10 +117,185 @@ fun HomeScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // PROMINENT WEB SYNC BANNER (Requested by user)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(StatusOnline)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "ĐANG ĐỒNG BỘ VỚI MÁY CHỦ WEB",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = StatusOnline
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(StatusOnline.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Neon PostgreSQL",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = StatusOnline
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "https://qu-n-l-s1k1.onrender.com",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                Text(
+                    text = "Dữ liệu vị trí, pin và trạng thái được truyền trực tiếp về máy chủ web để hiển thị trên Dashboard & Bản đồ.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                )
+
+                Button(
+                    onClick = {
+                        val webUrl = "https://qu-n-l-s1k1.onrender.com"
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(webUrl))
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Mở Web Quản lý (qu-n-l-s1k1.onrender.com)")
+                }
+            }
+        }
+
+        // Student Profile & Identification Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.School,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = uiState.studentName.ifBlank { "Học sinh Android" },
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Lớp: ${uiState.className} • ${uiState.grade}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { showEditDialog = true },
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Sửa", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Trường học:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = uiState.schoolName.ifBlank { "Chưa cập nhật" },
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "SĐT phụ huynh:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = uiState.parentPhone.ifBlank { "Chưa có" },
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+
         // Main Device Overview Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
@@ -124,7 +332,7 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "ID: ${uiState.deviceId.take(12)}...",
+                                text = "Mã: ${uiState.deviceId.take(12).ifEmpty { uiState.deviceUuid.take(12) }}...",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -132,11 +340,11 @@ fun HomeScreen(
                     }
 
                     // Connection status badge
-                    val (statusColor, statusText, statusIcon) = when (telemetry.syncStatus) {
-                        DeviceConnectionStatus.ONLINE -> Triple(StatusOnline, "Đang kết nối", Icons.Default.CloudDone)
-                        DeviceConnectionStatus.OFFLINE -> Triple(StatusOffline, "Mất kết nối", Icons.Default.CloudOff)
-                        DeviceConnectionStatus.SYNCING -> Triple(StatusIdle, "Đang đồng bộ", Icons.Default.Sync)
-                        DeviceConnectionStatus.IDLE -> Triple(StatusIdle, "Sẵn sàng", Icons.Default.NetworkCheck)
+                    val (statusColor, statusText) = when (telemetry.syncStatus) {
+                        DeviceConnectionStatus.ONLINE -> Pair(StatusOnline, "ONLINE")
+                        DeviceConnectionStatus.OFFLINE -> Pair(StatusOffline, "OFFLINE")
+                        DeviceConnectionStatus.SYNCING -> Pair(StatusIdle, "ĐỒNG BỘ")
+                        DeviceConnectionStatus.IDLE -> Pair(StatusIdle, "SẴN SÀNG")
                     }
 
                     Box(
@@ -234,7 +442,7 @@ fun HomeScreen(
             }
         }
 
-        // Location Sharing Card (Section 10 & 17)
+        // Location Sharing Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
@@ -286,7 +494,7 @@ fun HomeScreen(
                             )
                             Text(
                                 text = if (telemetry.locationSharingEnabled)
-                                    "Đang tự động cập nhật GPS về máy chủ"
+                                    "Đang tự động cập nhật GPS về máy chủ Render"
                                 else "Không gửi tọa độ GPS lên hệ thống",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -402,14 +610,82 @@ fun HomeScreen(
                 )
             }
         }
+    }
 
-        // Architecture note
-        Text(
-            text = "Dữ liệu được gửi trực tiếp đến Render Backend và lưu vào Neon PostgreSQL.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+    // Dialog for Editing Student & School Information
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Chỉnh sửa thông tin học sinh & thiết bị") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = editStudentName,
+                        onValueChange = { editStudentName = it },
+                        label = { Text("Tên học sinh") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = editClassName,
+                            onValueChange = { editClassName = it },
+                            label = { Text("Lớp") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = editGrade,
+                            onValueChange = { editGrade = it },
+                            label = { Text("Khối") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    OutlinedTextField(
+                        value = editSchoolName,
+                        onValueChange = { editSchoolName = it },
+                        label = { Text("Trường học") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editParentPhone,
+                        onValueChange = { editParentPhone = it },
+                        label = { Text("SĐT phụ huynh") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editDeviceName,
+                        onValueChange = { editDeviceName = it },
+                        label = { Text("Tên thiết bị") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showEditDialog = false
+                    onUpdateStudentProfile(
+                        editStudentName,
+                        editStudentId,
+                        editSchoolName,
+                        editGrade,
+                        editClassName,
+                        editParentPhone,
+                        editDeviceName
+                    )
+                }) {
+                    Text("Lưu & Đồng bộ")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("Hủy")
+                }
+            }
         )
     }
 }

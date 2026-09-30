@@ -25,6 +25,13 @@ class PreferenceManager(context: Context) {
         private const val KEY_LAST_LATITUDE = "key_last_latitude"
         private const val KEY_LAST_LONGITUDE = "key_last_longitude"
         private const val KEY_LAST_ACCURACY = "key_last_accuracy"
+        private const val KEY_STUDENT_NAME = "key_student_name"
+        private const val KEY_STUDENT_ID = "key_student_id"
+        private const val KEY_SCHOOL_NAME = "key_school_name"
+        private const val KEY_GRADE = "key_grade"
+        private const val KEY_CLASS_NAME = "key_class_name"
+        private const val KEY_PARENT_PHONE = "key_parent_phone"
+        private const val KEY_IS_LINKED = "key_is_linked"
 
         const val DEFAULT_API_BASE_URL = "https://qu-n-l-s1k1.onrender.com"
     }
@@ -81,6 +88,42 @@ class PreferenceManager(context: Context) {
         get() = prefs.getString(KEY_DEVICE_NAME, null) ?: "${Build.MANUFACTURER} ${Build.MODEL}"
         set(value) = prefs.edit().putString(KEY_DEVICE_NAME, value).apply()
 
+    var studentName: String
+        get() = prefs.getString(KEY_STUDENT_NAME, null) ?: "Học sinh Android"
+        set(value) = prefs.edit().putString(KEY_STUDENT_NAME, value).apply()
+
+    var studentId: String
+        get() {
+            var id = prefs.getString(KEY_STUDENT_ID, null)
+            if (id.isNullOrBlank()) {
+                val rand = (1000..9999).random()
+                id = "HS$rand"
+                prefs.edit().putString(KEY_STUDENT_ID, id).apply()
+            }
+            return id
+        }
+        set(value) = prefs.edit().putString(KEY_STUDENT_ID, value).apply()
+
+    var schoolName: String
+        get() = prefs.getString(KEY_SCHOOL_NAME, null) ?: "THPT Chuyên Lê Hồng Phong"
+        set(value) = prefs.edit().putString(KEY_SCHOOL_NAME, value).apply()
+
+    var grade: String
+        get() = prefs.getString(KEY_GRADE, null) ?: "Khối 10"
+        set(value) = prefs.edit().putString(KEY_GRADE, value).apply()
+
+    var className: String
+        get() = prefs.getString(KEY_CLASS_NAME, null) ?: "10A1"
+        set(value) = prefs.edit().putString(KEY_CLASS_NAME, value).apply()
+
+    var parentPhone: String
+        get() = prefs.getString(KEY_PARENT_PHONE, null) ?: "0901234567"
+        set(value) = prefs.edit().putString(KEY_PARENT_PHONE, value).apply()
+
+    var isLinked: Boolean
+        get() = prefs.getBoolean(KEY_IS_LINKED, !deviceId.isNullOrBlank())
+        set(value) = prefs.edit().putBoolean(KEY_IS_LINKED, value).apply()
+
     var isLocationSharingEnabled: Boolean
         get() = prefs.getBoolean(KEY_LOCATION_SHARING, false) // Default OFF per user requirement
         set(value) = prefs.edit().putBoolean(KEY_LOCATION_SHARING, value).apply()
@@ -123,6 +166,7 @@ class PreferenceManager(context: Context) {
             .remove(KEY_AUTH_TOKEN)
             .remove(KEY_USER_EMAIL)
             .remove(KEY_DEVICE_ID)
+            .remove(KEY_IS_LINKED)
             .apply()
     }
 }

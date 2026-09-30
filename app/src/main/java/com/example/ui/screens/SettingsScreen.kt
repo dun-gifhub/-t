@@ -272,12 +272,36 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                SettingInfoRow("Học sinh", uiState.studentName.ifBlank { "Chưa cập nhật" })
+                SettingInfoRow("Mã học sinh", uiState.studentId.ifBlank { "Chưa có" })
+                SettingInfoRow("Lớp / Khối", "${uiState.className} • ${uiState.grade}")
+                SettingInfoRow("Trường học", uiState.schoolName.ifBlank { "Chưa cập nhật" })
+                SettingInfoRow("SĐT phụ huynh", uiState.parentPhone.ifBlank { "Chưa có" })
                 SettingInfoRow("Tên thiết bị", uiState.deviceName)
                 SettingInfoRow("Device ID (Server)", uiState.deviceId.ifBlank { "Chưa liên kết" })
                 SettingInfoRow("Device UUID", uiState.deviceUuid)
                 SettingInfoRow("Hệ điều hành", "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
                 SettingInfoRow("Dòng máy (Model)", "${Build.MANUFACTURER} ${Build.MODEL}")
                 SettingInfoRow("Phiên bản App", BuildConfig.VERSION_NAME)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val context = androidx.compose.ui.platform.LocalContext.current
+                OutlinedButton(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://qu-n-l-s1k1.onrender.com")
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Dns, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Mở Web Quản Lý (qu-n-l-s1k1.onrender.com)")
+                }
             }
         }
 
