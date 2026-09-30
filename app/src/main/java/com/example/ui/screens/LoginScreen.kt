@@ -79,7 +79,7 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var showServerConfig by remember { mutableStateOf(false) }
-    var apiUrl by remember { mutableStateOf(state.apiBaseUrl) }
+    var apiUrl by remember(state.apiBaseUrl) { mutableStateOf(state.apiBaseUrl) }
 
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
@@ -442,7 +442,7 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = apiUrl,
                             onValueChange = { apiUrl = it },
-                            placeholder = { Text("https://YOUR-RENDER-DOMAIN") },
+                            placeholder = { Text("https://qu-n-l-s1k1.onrender.com") },
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()

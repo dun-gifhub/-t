@@ -23,7 +23,13 @@ object ApiClient {
 
     @Synchronized
     fun getApiService(prefs: PreferenceManager): DeviceMonitorApiService {
-        val targetUrl = prefs.apiBaseUrl
+        val rawUrl = prefs.apiBaseUrl.trim().ifEmpty { PreferenceManager.DEFAULT_API_BASE_URL }
+        val withScheme = if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
+            "https://$rawUrl"
+        } else {
+            rawUrl
+        }
+        val targetUrl = if (withScheme.endsWith("/")) withScheme else "$withScheme/"
         if (cachedService != null && currentBaseUrl == targetUrl) {
             return cachedService!!
         }
@@ -53,9 +59,9 @@ object ApiClient {
 
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
 

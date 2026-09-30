@@ -69,7 +69,7 @@ fun SettingsScreen(
     onLogout: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    var editableApiUrl by remember { mutableStateOf(uiState.apiBaseUrl) }
+    var editableApiUrl by remember(uiState.apiBaseUrl) { mutableStateOf(uiState.apiBaseUrl) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -148,7 +148,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = editableApiUrl,
                     onValueChange = { editableApiUrl = it },
-                    placeholder = { Text("https://YOUR-RENDER-DOMAIN") },
+                    placeholder = { Text("https://qu-n-l-s1k1.onrender.com") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)

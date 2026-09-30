@@ -13,28 +13,51 @@ data class LoginRequest(
 data class LoginResponse(
     @Json(name = "success") val success: Boolean? = true,
     @Json(name = "token") val token: String? = null,
+    @Json(name = "accessToken") val accessToken: String? = null,
+    @Json(name = "access_token") val accessTokenSnake: String? = null,
+    @Json(name = "jwt") val jwt: String? = null,
     @Json(name = "message") val message: String? = null,
+    @Json(name = "error") val error: String? = null,
+    @Json(name = "user") val user: UserInfo? = null,
     @Json(name = "data") val data: LoginData? = null
-)
+) {
+    fun extractToken(): String? =
+        token ?: accessToken ?: accessTokenSnake ?: jwt
+            ?: data?.token ?: data?.accessToken ?: data?.accessTokenSnake ?: data?.jwt
+}
 
 @JsonClass(generateAdapter = true)
 data class RegisterRequest(
     @Json(name = "name") val name: String,
     @Json(name = "email") val email: String,
-    @Json(name = "password") val password: String
+    @Json(name = "password") val password: String,
+    @Json(name = "fullName") val fullName: String = name,
+    @Json(name = "username") val username: String = name
 )
 
 @JsonClass(generateAdapter = true)
 data class RegisterResponse(
     @Json(name = "success") val success: Boolean? = true,
     @Json(name = "message") val message: String? = null,
+    @Json(name = "error") val error: String? = null,
     @Json(name = "token") val token: String? = null,
+    @Json(name = "accessToken") val accessToken: String? = null,
+    @Json(name = "access_token") val accessTokenSnake: String? = null,
+    @Json(name = "jwt") val jwt: String? = null,
+    @Json(name = "user") val user: UserInfo? = null,
     @Json(name = "data") val data: LoginData? = null
-)
+) {
+    fun extractToken(): String? =
+        token ?: accessToken ?: accessTokenSnake ?: jwt
+            ?: data?.token ?: data?.accessToken ?: data?.accessTokenSnake ?: data?.jwt
+}
 
 @JsonClass(generateAdapter = true)
 data class LoginData(
     @Json(name = "token") val token: String? = null,
+    @Json(name = "accessToken") val accessToken: String? = null,
+    @Json(name = "access_token") val accessTokenSnake: String? = null,
+    @Json(name = "jwt") val jwt: String? = null,
     @Json(name = "user") val user: UserInfo? = null
 )
 
@@ -58,8 +81,12 @@ data class DeviceRegisterRequest(
 data class DeviceRegisterResponse(
     @Json(name = "success") val success: Boolean? = true,
     @Json(name = "message") val message: String? = null,
+    @Json(name = "id") val id: String? = null,
+    @Json(name = "device") val device: DeviceData? = null,
     @Json(name = "data") val data: DeviceData? = null
-)
+) {
+    fun extractDeviceId(): String? = data?.id ?: device?.id ?: id
+}
 
 @JsonClass(generateAdapter = true)
 data class DeviceData(
@@ -79,8 +106,11 @@ data class DeviceData(
 @JsonClass(generateAdapter = true)
 data class DeviceListResponse(
     @Json(name = "success") val success: Boolean? = true,
+    @Json(name = "devices") val devices: List<DeviceData>? = null,
     @Json(name = "data") val data: List<DeviceData>? = null
-)
+) {
+    fun extractDevices(): List<DeviceData>? = data ?: devices
+}
 
 @JsonClass(generateAdapter = true)
 data class HeartbeatRequest(

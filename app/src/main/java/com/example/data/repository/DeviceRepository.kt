@@ -63,17 +63,38 @@ class DeviceRepository(
         }
     }
 
+    private fun parseServerErrorMessage(rawError: String?): String? {
+        if (rawError.isNullOrBlank()) return null
+        return try {
+            val json = org.json.JSONObject(rawError)
+            json.optString("message").takeIf { it.isNotBlank() }
+                ?: json.optString("error").takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun register(name: String, email: String, pass: String): ApiResult<String> {
         return try {
             val api = ApiClient.getApiService(prefs)
-            var response = api.register(RegisterRequest(name = name.trim(), email = email.trim(), password = pass))
+            val request = RegisterRequest(name = name.trim(), email = email.trim(), password = pass)
+            var response = api.register(request)
             if (response.code() == 404) {
-                response = api.signup(RegisterRequest(name = name.trim(), email = email.trim(), password = pass))
+                response = api.signup(request)
+            }
+            if (response.code() == 404) {
+                response = api.registerFallback(request)
             }
 
             if (response.isSuccessful) {
                 val body = response.body()
-                val token = body?.token ?: body?.data?.token
+                if (body?.success == false) {
+                    return ApiResult.Error(
+                        response.code(),
+                        body.message ?: body.error ?: "Đăng ký thất bại."
+                    )
+                }
+                val token = body?.extractToken()
                 if (!token.isNullOrBlank()) {
                     prefs.authToken = token
                     prefs.userEmail = email.trim()
@@ -86,11 +107,13 @@ class DeviceRepository(
                     if (loginRes is ApiResult.Success) {
                         loginRes
                     } else {
-                        ApiResult.Success("Đăng ký thành công! Đang chuyển đến đăng nhập...")
+                        prefs.userEmail = email.trim()
+                        ApiResult.Success("Đăng ký thành công! Vui lòng đăng nhập.")
                     }
                 }
             } else {
-                val errorMsg = when (response.code()) {
+                val serverMsg = parseServerErrorMessage(response.errorBody()?.string())
+                val errorMsg = serverMsg ?: when (response.code()) {
                     400 -> "Thông tin không hợp lệ hoặc email đã tồn tại."
                     409 -> "Email này đã được sử dụng. Vui lòng đăng nhập."
                     422 -> "Dữ liệu đăng ký không đúng định dạng."
@@ -101,7 +124,7 @@ class DeviceRepository(
                 ApiResult.Error(response.code(), errorMsg)
             }
         } catch (e: SocketTimeoutException) {
-            ApiResult.Error(null, "Không thể kết nối đến máy chủ (Hết thời gian phản hồi)")
+            ApiResult.Error(null, "Máy chủ Render đang khởi động lại, vui lòng thử lại sau vài giây.")
         } catch (e: IOException) {
             ApiResult.Error(null, "Mất kết nối mạng hoặc máy chủ không phản hồi")
         } catch (e: Exception) {
@@ -112,11 +135,15 @@ class DeviceRepository(
     suspend fun login(email: String, pass: String): ApiResult<String> {
         return try {
             val api = ApiClient.getApiService(prefs)
-            val response = api.login(LoginRequest(email = email.trim(), password = pass))
+            val request = LoginRequest(email = email.trim(), password = pass)
+            var response = api.login(request)
+            if (response.code() == 404) {
+                response = api.loginFallback(request)
+            }
 
             if (response.isSuccessful) {
                 val body = response.body()
-                val token = body?.token ?: body?.data?.token
+                val token = body?.extractToken()
                 if (!token.isNullOrBlank()) {
                     prefs.authToken = token
                     prefs.userEmail = email.trim()
@@ -126,10 +153,11 @@ class DeviceRepository(
                     syncDeviceRegistration()
                     ApiResult.Success(token)
                 } else {
-                    ApiResult.Error(response.code(), "Không nhận được mã xác thực hợp lệ từ máy chủ")
+                    ApiResult.Error(response.code(), body?.message ?: body?.error ?: "Không nhận được mã xác thực hợp lệ từ máy chủ")
                 }
             } else {
-                val msg = when (response.code()) {
+                val serverMsg = parseServerErrorMessage(response.errorBody()?.string())
+                val msg = serverMsg ?: when (response.code()) {
                     401 -> "Tài khoản hoặc mật khẩu không chính xác."
                     403 -> "Tài khoản bị từ chối truy cập."
                     429 -> "Quá nhiều yêu cầu. Vui lòng thử lại sau giây lát."
@@ -139,7 +167,7 @@ class DeviceRepository(
                 ApiResult.Error(response.code(), msg)
             }
         } catch (e: SocketTimeoutException) {
-            ApiResult.Error(null, "Không thể kết nối đến máy chủ (Hết thời gian phản hồi)")
+            ApiResult.Error(null, "Máy chủ Render đang khởi động lại, vui lòng thử lại sau vài giây.")
         } catch (e: IOException) {
             ApiResult.Error(null, "Mất kết nối mạng hoặc máy chủ không phản hồi")
         } catch (e: Exception) {
@@ -155,7 +183,7 @@ class DeviceRepository(
             // Check existing devices for this user
             val listResp = api.getDevices()
             if (listResp.isSuccessful) {
-                val devices = listResp.body()?.data
+                val devices = listResp.body()?.extractDevices()
                 val matched = devices?.find { it.deviceUuid == prefs.deviceUuid }
                 if (matched?.id != null) {
                     prefs.deviceId = matched.id
@@ -176,7 +204,7 @@ class DeviceRepository(
             )
 
             if (registerResp.isSuccessful) {
-                val devId = registerResp.body()?.data?.id
+                val devId = registerResp.body()?.extractDeviceId()
                 if (!devId.isNullOrBlank()) {
                     prefs.deviceId = devId
                     ApiResult.Success(devId)
@@ -211,7 +239,7 @@ class DeviceRepository(
             )
 
             if (registerResp.isSuccessful) {
-                val devId = registerResp.body()?.data?.id
+                val devId = registerResp.body()?.extractDeviceId()
                 if (!devId.isNullOrBlank()) {
                     prefs.deviceId = devId
                     ApiResult.Success(devId)

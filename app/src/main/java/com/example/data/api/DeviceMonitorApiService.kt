@@ -29,8 +29,18 @@ interface DeviceMonitorApiService {
         @Body body: RegisterRequest
     ): Response<RegisterResponse>
 
+    @POST("api/register")
+    suspend fun registerFallback(
+        @Body body: RegisterRequest
+    ): Response<RegisterResponse>
+
     @POST("api/auth/login")
     suspend fun login(
+        @Body body: LoginRequest
+    ): Response<LoginResponse>
+
+    @POST("api/login")
+    suspend fun loginFallback(
         @Body body: LoginRequest
     ): Response<LoginResponse>
 

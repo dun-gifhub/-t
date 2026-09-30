@@ -26,7 +26,14 @@ class PreferenceManager(context: Context) {
         private const val KEY_LAST_LONGITUDE = "key_last_longitude"
         private const val KEY_LAST_ACCURACY = "key_last_accuracy"
 
-        const val DEFAULT_API_BASE_URL = "https://ais-dev-avqp6vibrvwch5afkjn3z5-215487927469.asia-southeast1.run.app"
+        const val DEFAULT_API_BASE_URL = "https://qu-n-l-s1k1.onrender.com"
+    }
+
+    init {
+        val savedUrl = prefs.getString(KEY_API_BASE_URL, null)
+        if (savedUrl != null && (savedUrl.contains("ais-dev-") || savedUrl.contains("run.app"))) {
+            prefs.edit().putString(KEY_API_BASE_URL, "$DEFAULT_API_BASE_URL/").apply()
+        }
     }
 
     var authToken: String?
@@ -38,9 +45,21 @@ class PreferenceManager(context: Context) {
         set(value) = prefs.edit().putString(KEY_USER_EMAIL, value).apply()
 
     var apiBaseUrl: String
-        get() = prefs.getString(KEY_API_BASE_URL, null) ?: DEFAULT_API_BASE_URL
+        get() {
+            val saved = prefs.getString(KEY_API_BASE_URL, null)
+            if (saved.isNullOrBlank() || saved.contains("ais-dev-") || saved.contains("run.app")) {
+                return DEFAULT_API_BASE_URL
+            }
+            return saved.trimEnd('/')
+        }
         set(value) {
-            val cleanUrl = if (value.endsWith("/")) value else "$value/"
+            val trimmed = value.trim()
+            val withScheme = if (trimmed.isNotEmpty() && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+                "https://$trimmed"
+            } else {
+                trimmed
+            }
+            val cleanUrl = if (withScheme.endsWith("/")) withScheme else "$withScheme/"
             prefs.edit().putString(KEY_API_BASE_URL, cleanUrl).apply()
         }
 
