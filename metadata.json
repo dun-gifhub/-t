@@ -1,0 +1,6 @@
+{
+  "name": "Device Monitor",
+  "description": "Mobile client for Device Monitor system to sync real-time telemetry, battery, network, and GPS location.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

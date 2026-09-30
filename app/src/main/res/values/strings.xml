@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">Device Monitor</string>
+    <string name="login_title">Đăng nhập tài khoản</string>
+    <string name="login_subtitle">Kết nối thiết bị của bạn với hệ thống Device Monitor Web</string>
+    <string name="email_label">Email</string>
+    <string name="password_label">Mật khẩu</string>
+    <string name="login_button">Đăng nhập</string>
+    <string name="register_title">Đăng ký tài khoản</string>
+    <string name="register_subtitle">Tạo tài khoản mới và gửi lưu trữ lên hệ thống Device Monitor Web</string>
+    <string name="register_button">Đăng ký tài khoản</string>
+    <string name="name_label">Họ và tên</string>
+    <string name="confirm_password_label">Xác nhận mật khẩu</string>
+    <string name="logout_button">Đăng xuất</string>
+    <string name="link_device_title">Liên kết thiết bị</string>
+    <string name="link_device_subtitle">Thiết lập thông tin thiết bị này trên tài khoản của bạn</string>
+    <string name="device_name_label">Tên thiết bị</string>
+    <string name="device_uuid_label">Mã định danh (UUID)</string>
+    <string name="link_device_button">Liên kết thiết bị</string>
+    <string name="status_connected">Đang kết nối</string>
+    <string name="status_offline">Mất kết nối</string>
+    <string name="status_idle">Chờ hoạt động</string>
+    <string name="location_sharing_on">Chia sẻ vị trí: BẬT</string>
+    <string name="location_sharing_off">Chia sẻ vị trí: TẮT</string>
+    <string name="location_disclosure">Ứng dụng sử dụng vị trí để cập nhật vị trí thiết bị trên tài khoản Device Monitor của bạn. Bạn có thể bật hoặc tắt bất kỳ lúc nào.</string>
+    <string name="privacy_title">Quyền riêng tư</string>
+    <string name="privacy_content">Ứng dụng chỉ chia sẻ vị trí khi bạn đã cấp quyền và bật tính năng chia sẻ vị trí. Bạn có thể tắt chia sẻ vị trí bất cứ lúc nào. Dữ liệu được gửi an toàn qua giao thức HTTPS đến máy chủ hệ thống.</string>
+</resources>
