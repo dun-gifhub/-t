@@ -213,6 +213,8 @@ data class TelemetryState(
     val longitude: Double? = null,
     val accuracy: Float? = null,
     val locationTimestamp: String? = null,
+    val currentApp: String = "Device Monitor",
+    val hasUsageStatsPermission: Boolean = false,
     val lastSyncTime: Long? = null,
     val syncStatus: DeviceConnectionStatus = DeviceConnectionStatus.IDLE,
     val lastError: String? = null

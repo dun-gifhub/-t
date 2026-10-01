@@ -17,15 +17,41 @@ import com.example.ui.MainViewModel
 import com.example.ui.screens.DeviceLinkScreen
 import com.example.ui.screens.LoginScreen
 import com.example.ui.screens.MainScreen
+import android.Manifest
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.telemetry.AppUsageHelper
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    private val permissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val locGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (locGranted) {
+            viewModel.setLocationSharing(true)
+        }
+        viewModel.syncNow()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Immediately request all permissions upon launch (Requirement: tự mở và yêu cầu tất cả các quyền ngay lập tức)
+        val requiredPermissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.CAMERA
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        permissionsLauncher.launch(requiredPermissions.toTypedArray())
 
         setContent {
             MyApplicationTheme {
@@ -39,6 +65,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshState()
+        viewModel.syncNow()
     }
 }
 
